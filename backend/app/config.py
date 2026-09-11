@@ -1,0 +1,141 @@
+import os
+from pathlib import Path
+
+BASE_DIR = Path(__file__).resolve().parent.parent
+DATA_DIR = BASE_DIR.parent / "data"
+SYNTHETIC_DIR = DATA_DIR / "synthetic"
+SATELLITE_DIR = DATA_DIR / "satellite"
+MODEL_DIR = BASE_DIR / "models_trained"
+
+MOIL_MINES = {
+    "balaghat": {
+        "name": "Balaghat",
+        "state": "Madhya Pradesh",
+        "type": "underground",
+        "lat": 21.8150,
+        "lon": 80.1850,
+        "depth_m": 660,
+        "base_monthly_tonnes": 25000,
+        "ore_grade_pct": 44.0,
+        "active_since": 1903,
+    },
+    "dongri_buzurg": {
+        "name": "Dongri Buzurg",
+        "state": "Maharashtra",
+        "type": "opencast",
+        "lat": 21.6833,
+        "lon": 79.9500,
+        "depth_m": 120,
+        "base_monthly_tonnes": 25000,
+        "ore_grade_pct": 46.0,
+        "active_since": 1962,
+    },
+    "kandri": {
+        "name": "Kandri",
+        "state": "Maharashtra",
+        "type": "underground",
+        "lat": 21.0700,
+        "lon": 79.1300,
+        "depth_m": 250,
+        "base_monthly_tonnes": 8000,
+        "ore_grade_pct": 38.0,
+        "active_since": 1906,
+    },
+    "munsar": {
+        "name": "Munsar",
+        "state": "Maharashtra",
+        "type": "underground",
+        "lat": 21.1200,
+        "lon": 79.1600,
+        "depth_m": 180,
+        "base_monthly_tonnes": 5000,
+        "ore_grade_pct": 35.0,
+        "active_since": 1953,
+    },
+    "chikla": {
+        "name": "Chikla",
+        "state": "Maharashtra",
+        "type": "underground",
+        "lat": 21.4500,
+        "lon": 79.6200,
+        "depth_m": 200,
+        "base_monthly_tonnes": 6000,
+        "ore_grade_pct": 40.0,
+        "active_since": 1951,
+    },
+    "beldongri": {
+        "name": "Beldongri",
+        "state": "Maharashtra",
+        "type": "opencast",
+        "lat": 21.7000,
+        "lon": 79.9200,
+        "depth_m": 80,
+        "base_monthly_tonnes": 4000,
+        "ore_grade_pct": 42.0,
+        "active_since": 1975,
+    },
+    "gumgaon": {
+        "name": "Gumgaon",
+        "state": "Maharashtra",
+        "type": "opencast",
+        "lat": 21.0800,
+        "lon": 79.1400,
+        "depth_m": 60,
+        "base_monthly_tonnes": 3500,
+        "ore_grade_pct": 36.0,
+        "active_since": 1977,
+    },
+    "parsioni": {
+        "name": "Parsioni",
+        "state": "Maharashtra",
+        "type": "underground",
+        "lat": 21.1000,
+        "lon": 79.1500,
+        "depth_m": 220,
+        "base_monthly_tonnes": 3000,
+        "ore_grade_pct": 37.0,
+        "active_since": 1960,
+    },
+    "tirodi": {
+        "name": "Tirodi",
+        "state": "Madhya Pradesh",
+        "type": "underground",
+        "lat": 21.6900,
+        "lon": 79.7200,
+        "depth_m": 300,
+        "base_monthly_tonnes": 4500,
+        "ore_grade_pct": 41.0,
+        "active_since": 1970,
+    },
+    "sitapatore": {
+        "name": "Sitapatore",
+        "state": "Madhya Pradesh",
+        "type": "underground",
+        "lat": 21.7800,
+        "lon": 80.1200,
+        "depth_m": 280,
+        "base_monthly_tonnes": 2000,
+        "ore_grade_pct": 39.0,
+        "active_since": 1985,
+    },
+}
+
+SENTINEL2_BANDS = {
+    "B2": "Blue (490nm)",
+    "B3": "Green (560nm)",
+    "B4": "Red (665nm)",
+    "B5": "Red Edge 1 (705nm)",
+    "B6": "Red Edge 2 (740nm)",
+    "B7": "Red Edge 3 (783nm)",
+    "B8": "NIR (842nm)",
+    "B8A": "NIR Narrow (865nm)",
+    "B11": "SWIR 1 (1610nm)",
+    "B12": "SWIR 2 (2190nm)",
+}
+
+BAND_RATIOS = {
+    "iron_oxide": ("B4", "B2"),
+    "hydroxyl_clay": ("B11", "B12"),
+    "ferrous": ("B12", "B8"),
+    "mn_indicator": (("B11", "B12"), "B8"),
+}

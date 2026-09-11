@@ -1,0 +1,12 @@
+__pycache__/
+*.pyc
+*.pyo
+node_modules/
+dist/
+.env
+*.pkl
+data/synthetic/
+data/satellite/
+models_trained/
+.claude/
+.vite/
