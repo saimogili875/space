@@ -5,7 +5,8 @@ import ForecastChart from './components/ForecastChart'
 import WeatherPanel from './components/WeatherPanel'
 import AlertCards from './components/AlertCards'
 import ShapChart from './components/ShapChart'
-import { useMines, useForecast, useAlerts, useShap, useSatellite, useProduction } from './hooks/useApi'
+import SpectralPanel from './components/SpectralPanel'
+import { useMines, useForecast, useAlerts, useShap, useSatellite, useProduction, useHeatmap } from './hooks/useApi'
 import { ALERT_COLORS } from './utils/constants'
 
 function StatCard({ label, value, sub, color }) {
@@ -18,17 +19,22 @@ function StatCard({ label, value, sub, color }) {
   )
 }
 
-function PanelHeader({ title, subtitle }) {
+function PanelHeader({ title, subtitle, right }) {
   return (
-    <div className="mb-2">
-      <h2 className="text-sm font-semibold text-primary tracking-wide uppercase">{title}</h2>
-      {subtitle && <p className="text-xs text-text-muted">{subtitle}</p>}
+    <div className="mb-2 flex items-start justify-between">
+      <div>
+        <h2 className="text-sm font-semibold text-primary tracking-wide uppercase">{title}</h2>
+        {subtitle && <p className="text-xs text-text-muted">{subtitle}</p>}
+      </div>
+      {right}
     </div>
   )
 }
 
 export default function App() {
   const [selectedMine, setSelectedMine] = useState('balaghat')
+  const [showHeatmap, setShowHeatmap] = useState(false)
+  const [activeTab, setActiveTab] = useState('weather')
 
   const { data: mines } = useMines()
   const { data: forecast } = useForecast(selectedMine)
@@ -37,6 +43,7 @@ export default function App() {
   const { data: shap } = useShap(selectedMine)
   const { data: weather } = useSatellite(selectedMine, 90)
   const { data: production } = useProduction(selectedMine, 24)
+  const { data: heatmap } = useHeatmap(showHeatmap ? selectedMine : null)
 
   const currentMine = mines?.find(m => m.id === selectedMine)
   const latestForecast = forecast?.[0]
@@ -97,28 +104,74 @@ export default function App() {
       </div>
 
       {/* Main Grid */}
-      <div className="px-6 pb-6 grid grid-cols-1 lg:grid-cols-2 gap-4" style={{ height: 'calc(100vh - 200px)' }}>
+      <div className="px-6 pb-4 grid grid-cols-1 lg:grid-cols-2 gap-4">
         {/* Panel 1: Map */}
         <div className="bg-card rounded-xl border border-border p-4 flex flex-col min-h-[300px]">
-          <PanelHeader title="MOIL Mine Locations" subtitle="Click mine to select — color indicates alert status" />
+          <PanelHeader
+            title="MOIL Mine Locations"
+            subtitle={showHeatmap ? `${currentMine?.name || ''} — Manganese probability heatmap` : 'Click mine to select — color indicates alert status'}
+            right={
+              <button
+                onClick={() => setShowHeatmap(!showHeatmap)}
+                className={`text-xs px-3 py-1 rounded-full border transition-colors ${
+                  showHeatmap
+                    ? 'bg-accent text-white border-accent'
+                    : 'bg-transparent text-primary border-primary hover:bg-primary/10'
+                }`}
+              >
+                {showHeatmap ? 'Hide Heatmap' : 'Show Mn Heatmap'}
+              </button>
+            }
+          />
           <div className="flex-1">
-            <MineMap mines={mines} alerts={allAlerts} selected={selectedMine} onSelect={setSelectedMine} />
+            <MineMap
+              mines={mines}
+              alerts={allAlerts}
+              selected={selectedMine}
+              onSelect={setSelectedMine}
+              heatmap={showHeatmap ? heatmap : null}
+            />
           </div>
         </div>
 
         {/* Panel 2: Forecast */}
         <div className="bg-card rounded-xl border border-border p-4 flex flex-col min-h-[300px]">
-          <PanelHeader title="Production Forecast" subtitle={currentMine ? `${currentMine.name} — Actual vs Predicted vs Target` : 'Select a mine'} />
+          <PanelHeader title="Production Forecast" subtitle={currentMine ? `${currentMine.name} — Ensemble: XGBoost (60%) + LSTM (40%)` : 'Select a mine'} />
           <div className="flex-1">
             <ForecastChart forecast={forecast} production={production} />
           </div>
         </div>
 
-        {/* Panel 3: Weather */}
+        {/* Panel 3: Weather / Spectral toggle */}
         <div className="bg-card rounded-xl border border-border p-4 flex flex-col min-h-[250px]">
-          <PanelHeader title="Environmental Data" subtitle={currentMine ? `${currentMine.name} — Last 90 days from satellite` : 'Satellite-derived indicators'} />
+          <PanelHeader
+            title={activeTab === 'weather' ? 'Environmental Data' : 'Spectral Analysis'}
+            subtitle={activeTab === 'weather'
+              ? (currentMine ? `${currentMine.name} — Last 90 days from satellite` : 'Satellite-derived indicators')
+              : (currentMine ? `${currentMine.name} — Sentinel-2 band ratios` : 'Band ratio indices')
+            }
+            right={
+              <div className="flex gap-1 text-xs">
+                <button
+                  onClick={() => setActiveTab('weather')}
+                  className={`px-2 py-1 rounded ${activeTab === 'weather' ? 'bg-primary text-white' : 'text-primary hover:bg-primary/10'}`}
+                >
+                  Weather
+                </button>
+                <button
+                  onClick={() => setActiveTab('spectral')}
+                  className={`px-2 py-1 rounded ${activeTab === 'spectral' ? 'bg-primary text-white' : 'text-primary hover:bg-primary/10'}`}
+                >
+                  Spectral
+                </button>
+              </div>
+            }
+          />
           <div className="flex-1">
-            <WeatherPanel weather={weather} />
+            {activeTab === 'weather'
+              ? <WeatherPanel weather={weather} />
+              : <SpectralPanel mineId={selectedMine} />
+            }
           </div>
         </div>
 
@@ -143,7 +196,7 @@ export default function App() {
 
       {/* Footer */}
       <footer className="bg-primary text-blue-200 text-xs text-center py-2 opacity-80">
-        MangaLens v1.0 — SIH26009 — Ministry of Steel / MOIL Ltd. — Built with Sentinel-2, XGBoost, React
+        MangaLens v1.0 — SIH26009 — Ministry of Steel / MOIL Ltd. — XGBoost + LSTM Ensemble | Sentinel-2 Spectral | React
       </footer>
     </div>
   )

@@ -1,11 +1,12 @@
 import { MapContainer, TileLayer, CircleMarker, Popup, Tooltip } from 'react-leaflet'
 import { MINE_COLORS, ALERT_COLORS } from '../utils/constants'
+import HeatmapOverlay from './HeatmapOverlay'
 import 'leaflet/dist/leaflet.css'
 
 const CENTER = [21.4, 79.6]
 const ZOOM = 8
 
-export default function MineMap({ mines, alerts, selected, onSelect }) {
+export default function MineMap({ mines, alerts, selected, onSelect, heatmap }) {
   if (!mines) return <div className="h-full flex items-center justify-center text-text-muted">Loading map...</div>
 
   const alertMap = {}
@@ -21,6 +22,7 @@ export default function MineMap({ mines, alerts, selected, onSelect }) {
         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a>'
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
       />
+      {heatmap && <HeatmapOverlay data={heatmap} />}
       {mines.map(mine => {
         const alertLevel = alertMap[mine.id]
         const color = alertLevel ? ALERT_COLORS[alertLevel] : (MINE_COLORS[mine.id] || '#3498db')
@@ -57,6 +59,12 @@ export default function MineMap({ mines, alerts, selected, onSelect }) {
                 <p>Grade: {mine.ore_grade_pct}%</p>
                 <p>Base output: {mine.base_monthly_tonnes.toLocaleString()} t/month</p>
                 <p>Since: {mine.active_since}</p>
+                {heatmap && (
+                  <p className="mt-1 font-semibold text-orange-600">
+                    Mn Probability: {(heatmap.avg_probability * 100).toFixed(0)}% avg
+                    <br />High-prob area: {heatmap.high_prob_area_pct}%
+                  </p>
+                )}
               </div>
             </Popup>
           </CircleMarker>

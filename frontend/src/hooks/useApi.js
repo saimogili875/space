@@ -45,3 +45,11 @@ export function useSatellite(mineId, limit = 90) {
 export function useProduction(mineId, limit = 24) {
   return useApi(mineId ? `/satellite/${mineId}/production?limit=${limit}` : null, [mineId])
 }
+
+export function useHeatmap(mineId) {
+  return useApi(mineId ? `/satellite/${mineId}/heatmap` : null, [mineId])
+}
+
+export function useSatelliteTile(mineId, date = '2024-01-15') {
+  return useApi(mineId ? `/satellite/${mineId}/tile?date=${date}` : null, [mineId, date])
+}

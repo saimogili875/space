@@ -1,5 +1,7 @@
 """
-Prediction service: loads trained model, generates forecasts, alerts, and SHAP values.
+Prediction service: loads ensemble model, generates forecasts, alerts, and SHAP values.
+Uses XGBoost (0.6) + LSTM (0.4) ensemble for production forecasting.
+Falls back to XGBoost-only if LSTM model not available.
 """
 
 import numpy as np
@@ -12,26 +14,49 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
 from app.config import MOIL_MINES, MODEL_DIR, SYNTHETIC_DIR
 from app.models.schemas import ProductionForecast, Alert, AlertLevel
 from app.ml.feature_eng import build_features, FEATURE_COLS
-from app.ml.xgb_model import load_model, predict, get_shap_values
+from app.ml.xgb_model import load_model as load_xgb, predict as xgb_predict, get_shap_values
 from app.services.actions import generate_actions
 
 
 class PredictionService:
     def __init__(self):
-        self._model = None
+        self._xgb = None
+        self._ensemble = None
         self._features_df = None
+        self._use_ensemble = False
 
     @property
     def model(self):
-        if self._model is None:
-            self._model = load_model()
-        return self._model
+        if self._xgb is None:
+            self._xgb = load_xgb()
+        return self._xgb
+
+    @property
+    def ensemble(self):
+        if self._ensemble is None:
+            try:
+                from app.ml.ensemble import EnsemblePredictor
+                ens = EnsemblePredictor()
+                ens.load()
+                self._ensemble = ens
+                self._use_ensemble = True
+            except Exception:
+                self._use_ensemble = False
+        return self._ensemble
 
     @property
     def features_df(self):
         if self._features_df is None:
             self._features_df = build_features()
         return self._features_df
+
+    def _predict(self, mine_df: pd.DataFrame) -> np.ndarray:
+        if self.ensemble and self._use_ensemble:
+            try:
+                return self.ensemble.predict(mine_df)
+            except Exception:
+                pass
+        return xgb_predict(self.model, mine_df)
 
     def get_forecast(self, mine_id: str, periods: int = 4) -> list[ProductionForecast]:
         df = self.features_df
@@ -40,11 +65,13 @@ class PredictionService:
         if mine_df.empty:
             return []
 
-        predictions = predict(self.model, mine_df)
+        predictions = self._predict(mine_df)
         shap_features = get_shap_values(self.model, mine_df)
 
         forecasts = []
         for i, (_, row) in enumerate(mine_df.iterrows()):
+            if i >= len(predictions):
+                break
             pred = float(predictions[i])
             target = float(row["target_tonnes"])
             shortfall_pct = (pred - target) / target * 100

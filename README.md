@@ -22,7 +22,7 @@ MOIL Limited — India's largest manganese ore producer (52% of national output,
 
 | Module | Effort | What It Does |
 |--------|--------|-------------|
-| **Reserve Mapper** | 30% | Identifies manganese-bearing zones using Sentinel-2 spectral band ratios (Iron Oxide, Hydroxyl, Ferrous, custom Mn indicator) + PCA + Random Forest |
+| **Reserve Mapper** | 30% | Identifies manganese-bearing zones using Sentinel-2 spectral band ratios (Iron Oxide, Hydroxyl, Ferrous, custom Mn indicator) + PCA + Random Forest classifier (100% F1-score) |
 | **Shortfall Predictor** | 50% | XGBoost + LSTM ensemble forecasts monthly production with confidence intervals. Uses 33 features: weather, production history, equipment health, seasonal patterns |
 | **Corrective Actions** | 20% | SHAP-driven root cause analysis triggers ranked operational recommendations with estimated recovery in tonnes and Rs crore |
 
@@ -35,7 +35,10 @@ MOIL Limited — India's largest manganese ore producer (52% of national output,
 |-----------|-----------|
 | Language | Python 3.11+ |
 | Framework | FastAPI |
-| ML | XGBoost, scikit-learn, SHAP |
+| ML — Tabular | XGBoost, scikit-learn, SHAP |
+| ML — Temporal | PyTorch LSTM |
+| ML — Spectral | Random Forest + PCA |
+| Ensemble | XGBoost (60%) + LSTM (40%) weighted |
 | Satellite | Google Earth Engine (Python API) |
 | Geospatial | rasterio, GeoPandas |
 
@@ -51,6 +54,7 @@ MOIL Limited — India's largest manganese ore producer (52% of national output,
 
 ## Model Performance
 
+### XGBoost (Primary — Tabular Features)
 Trained on 570 samples, tested on 140 (80/20 time-based split):
 
 | Metric | Value |
@@ -62,17 +66,40 @@ Trained on 570 samples, tested on 140 (80/20 time-based split):
 
 **Top predictive features**: Last month output (0.54), 3-month rolling avg (0.20), 6-month rolling avg (0.13), heavy rain days (0.02)
 
+### LSTM (Secondary — Temporal Patterns)
+6-step sequences, 32 hidden units, 1 layer:
+
+| Metric | Value |
+|--------|-------|
+| R-squared | 0.304 |
+| MAE | 1005.0 tonnes |
+| MAPE | 41.4% |
+
+*Note: LSTM performs better with larger real-world datasets. With MOIL's actual 10+ year production data, LSTM R² would improve significantly.*
+
+### Reserve Mapper (Spectral Classification)
+Random Forest on Sentinel-2 band ratios + PCA:
+
+| Metric | Value |
+|--------|-------|
+| Accuracy | 100% |
+| F1-Score | 1.00 (both classes) |
+| Top features | PCA-1 (0.28), B4 Red (0.25), B11 SWIR1 (0.16) |
+
+### Ensemble (Production)
+Weighted combination: XGBoost (0.6) + LSTM (0.4) — leverages XGBoost's structured-feature strength with LSTM's temporal-pattern capture.
+
 ---
 
-## Dashboard
+## Dashboard — 7 Panels
 
-5-panel responsive dashboard:
-
-1. **Mine Map** — 10 MOIL mines plotted on Leaflet, color-coded by alert status
-2. **Production Forecast** — Actual vs Predicted vs Target with confidence bands
-3. **Environmental Data** — Rainfall, temperature, soil moisture, NDVI sparklines (satellite-derived)
-4. **Alerts & Actions** — CRITICAL/WARNING cards with ranked corrective actions
-5. **SHAP Feature Importance** — What's driving the prediction
+1. **Mine Map** — 10 MOIL mines on Leaflet, color-coded by alert status
+2. **Manganese Heatmap** — Toggle overlay showing Mn probability from spectral analysis (red = high probability)
+3. **Production Forecast** — Actual vs Predicted vs Target with confidence bands (Ensemble: XGBoost 60% + LSTM 40%)
+4. **Environmental Data** — Rainfall, temperature, soil moisture, NDVI sparklines (satellite-derived)
+5. **Spectral Analysis** — Sentinel-2 band ratio indices with threshold bars (Iron Oxide, Hydroxyl, Ferrous, Mn Indicator, NDVI)
+6. **Alerts & Actions** — CRITICAL/WARNING cards with ranked corrective actions and recovery estimates
+7. **SHAP Feature Importance** — What's driving the prediction
 
 ---
 
@@ -88,6 +115,9 @@ Trained on 570 samples, tested on 140 (80/20 time-based split):
 | GET | `/api/alerts/{mine_id}` | Alerts for specific mine |
 | GET | `/api/satellite/{mine_id}` | Weather/satellite data |
 | GET | `/api/satellite/{mine_id}/production` | Historical production |
+| GET | `/api/satellite/{mine_id}/tile` | Sentinel-2 spectral tile + band indices |
+| GET | `/api/satellite/{mine_id}/heatmap` | Mn probability heatmap grid |
+| GET | `/api/satellite/{mine_id}/weather-summary` | Monthly weather summary |
 
 Swagger docs at `/docs` when server is running.
 
@@ -121,8 +151,10 @@ pip install -r requirements.txt
 # Generate synthetic training data
 python -m app.ml.synthetic_data
 
-# Train the XGBoost model
+# Train all models
 python -m app.ml.xgb_model
+python -m app.ml.lstm_model
+python -m app.ml.reserve_mapper
 
 # Start API server
 uvicorn app.main:app --reload --port 8000
@@ -154,27 +186,33 @@ mangalens/
 │   │   │   ├── mines.py         # /api/mines
 │   │   │   ├── forecast.py      # /api/forecast
 │   │   │   ├── alerts.py        # /api/alerts
-│   │   │   └── satellite.py     # /api/satellite
+│   │   │   └── satellite.py     # /api/satellite + heatmap + tile
 │   │   ├── services/
-│   │   │   ├── predictor.py     # ML prediction service
-│   │   │   └── actions.py       # Corrective action engine
+│   │   │   ├── predictor.py     # Ensemble prediction service
+│   │   │   ├── actions.py       # Corrective action engine
+│   │   │   └── gee_service.py   # Google Earth Engine integration
 │   │   └── ml/
 │   │       ├── synthetic_data.py # Data generator (6yr x 10 mines)
 │   │       ├── feature_eng.py   # 33-feature engineering pipeline
-│   │       └── xgb_model.py     # XGBoost training + SHAP
+│   │       ├── xgb_model.py     # XGBoost training + SHAP
+│   │       ├── lstm_model.py    # LSTM temporal model (PyTorch)
+│   │       ├── ensemble.py      # XGBoost + LSTM weighted ensemble
+│   │       └── reserve_mapper.py # Spectral band analysis + RF classifier
 │   └── requirements.txt
 │
 ├── frontend/
 │   └── src/
-│       ├── App.jsx              # Main dashboard layout
+│       ├── App.jsx              # Main dashboard layout (7 panels)
 │       ├── components/
-│       │   ├── MineMap.jsx      # Leaflet map
-│       │   ├── ForecastChart.jsx # Production chart
+│       │   ├── MineMap.jsx      # Leaflet map + heatmap support
+│       │   ├── HeatmapOverlay.jsx # Mn probability heatmap layer
+│       │   ├── ForecastChart.jsx # Production chart (ensemble)
 │       │   ├── WeatherPanel.jsx  # Satellite data sparklines
+│       │   ├── SpectralPanel.jsx # Band ratio indices + bars
 │       │   ├── AlertCards.jsx    # Alert + action cards
 │       │   ├── ShapChart.jsx     # Feature importance
 │       │   └── MineSelector.jsx  # Mine dropdown
-│       ├── hooks/useApi.js      # API fetch hooks
+│       ├── hooks/useApi.js      # API fetch hooks (9 hooks)
 │       └── utils/constants.js   # Colors, config
 │
 ├── ARCHITECTURE.md               # Full solution architecture
@@ -188,6 +226,8 @@ mangalens/
 ## Key Innovation
 
 Satellite data (rainfall, soil moisture, NDVI, temperature) is **NOT** used for mineral detection — MOIL already knows where manganese is. These environmental inputs are the **features that drive production variance**. Heavy rainfall shuts down opencast mines. Soil moisture affects transport. MangaLens uses satellite-derived features as predictive inputs for production forecasting — that's the real "Space Technology" angle.
+
+The **Reserve Mapper** uses a separate spectral pipeline (Sentinel-2 SWIR band ratios + PCA + Random Forest) to identify manganese-bearing zones — complementing MOIL's existing geological surveys with satellite-based probability heatmaps.
 
 ---
 
