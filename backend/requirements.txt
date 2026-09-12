@@ -12,3 +12,4 @@ shapely==2.0.5
 rasterio==1.3.10
 earthengine-api==0.1.414
 python-dotenv==1.0.1
+reportlab==4.2.2

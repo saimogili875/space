@@ -6,8 +6,9 @@ import WeatherPanel from './components/WeatherPanel'
 import AlertCards from './components/AlertCards'
 import ShapChart from './components/ShapChart'
 import SpectralPanel from './components/SpectralPanel'
+import WhatIfSimulator from './components/WhatIfSimulator'
 import { useMines, useForecast, useAlerts, useShap, useSatellite, useProduction, useHeatmap } from './hooks/useApi'
-import { ALERT_COLORS } from './utils/constants'
+import { ALERT_COLORS, API_BASE } from './utils/constants'
 
 function StatCard({ label, value, sub, color }) {
   return (
@@ -35,6 +36,7 @@ export default function App() {
   const [selectedMine, setSelectedMine] = useState('balaghat')
   const [showHeatmap, setShowHeatmap] = useState(false)
   const [activeTab, setActiveTab] = useState('weather')
+  const [showWhatIf, setShowWhatIf] = useState(false)
 
   const { data: mines } = useMines()
   const { data: forecast } = useForecast(selectedMine)
@@ -51,6 +53,10 @@ export default function App() {
   const criticalCount = allAlerts?.filter(a => a.alert_level === 'CRITICAL').length || 0
   const warningCount = allAlerts?.filter(a => a.alert_level === 'WARNING').length || 0
 
+  const downloadReport = () => {
+    window.open(`${API_BASE}/report/${selectedMine}`, '_blank')
+  }
+
   return (
     <div className="min-h-screen bg-surface">
       {/* Header */}
@@ -63,6 +69,23 @@ export default function App() {
         </div>
         <div className="flex items-center gap-4">
           <MineSelector mines={mines} selected={selectedMine} onSelect={setSelectedMine} />
+          <button
+            onClick={downloadReport}
+            className="text-xs px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 transition-colors border border-white/20"
+            title="Download PDF Report"
+          >
+            PDF Report
+          </button>
+          <button
+            onClick={() => setShowWhatIf(!showWhatIf)}
+            className={`text-xs px-3 py-1.5 rounded-lg border transition-colors ${
+              showWhatIf
+                ? 'bg-accent text-white border-accent'
+                : 'bg-white/10 hover:bg-white/20 border-white/20'
+            }`}
+          >
+            What-If
+          </button>
           <div className="flex gap-2 text-xs">
             {criticalCount > 0 && (
               <span className="px-2 py-1 rounded-full font-bold" style={{ backgroundColor: ALERT_COLORS.CRITICAL }}>
@@ -77,6 +100,22 @@ export default function App() {
           </div>
         </div>
       </header>
+
+      {/* What-If Simulator (collapsible) */}
+      {showWhatIf && (
+        <div className="px-6 py-3">
+          <div className="bg-card rounded-xl border-2 border-accent p-4">
+            <PanelHeader
+              title="What-If Simulator"
+              subtitle={currentMine ? `${currentMine.name} — Adjust parameters to see production impact` : 'Select a mine first'}
+              right={
+                <button onClick={() => setShowWhatIf(false)} className="text-xs text-gray-400 hover:text-gray-600">Close</button>
+              }
+            />
+            <WhatIfSimulator mineId={selectedMine} mineName={currentMine?.name} />
+          </div>
+        </div>
+      )}
 
       {/* Stats Bar */}
       <div className="px-6 py-3 grid grid-cols-2 md:grid-cols-4 gap-3">
