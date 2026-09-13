@@ -48,7 +48,7 @@ export default function ROICalculator({ onClose }) {
         </div>
 
         {/* Hero stats */}
-        <div className="grid grid-cols-4 gap-4 mb-6 p-4 rounded-xl bg-gradient-to-r from-blue-50 to-green-50 dark:from-blue-900/20 dark:to-green-900/20 border border-border">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 mb-6 p-4 rounded-xl bg-gradient-to-r from-blue-50 to-green-50 dark:from-blue-900/20 dark:to-green-900/20 border border-border">
           <BigStat label="Annual Savings" value={`Rs ${summary.annual_savings_crore} Cr`} color="#16a34a" />
           <BigStat label="ROI" value={`${summary.roi_pct}%`} color="#e67e22" />
           <BigStat label="Tonnes Recovered" value={summary.tonnes_recovered_annually.toLocaleString()} sub="per year" />
@@ -56,7 +56,7 @@ export default function ROICalculator({ onClose }) {
         </div>
 
         {/* Before vs After */}
-        <div className="grid grid-cols-2 gap-4 mb-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
           <div className="rounded-xl border-2 border-red-200 dark:border-red-900 p-4">
             <p className="text-xs font-bold text-red-500 uppercase tracking-wide mb-3">Without MangaLens</p>
             <div className="space-y-2 text-sm">
