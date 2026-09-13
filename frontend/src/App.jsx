@@ -7,7 +7,9 @@ import AlertCards from './components/AlertCards'
 import ShapChart from './components/ShapChart'
 import SpectralPanel from './components/SpectralPanel'
 import WhatIfSimulator from './components/WhatIfSimulator'
-import { useMines, useForecast, useAlerts, useShap, useSatellite, useProduction, useHeatmap } from './hooks/useApi'
+import AnomalyPanel from './components/AnomalyPanel'
+import MineCompare from './components/MineCompare'
+import { useMines, useForecast, useAlerts, useShap, useSatellite, useProduction, useHeatmap, useAutoRefresh } from './hooks/useApi'
 import { ALERT_COLORS, API_BASE } from './utils/constants'
 
 function StatCard({ label, value, sub, color }) {
@@ -32,20 +34,37 @@ function PanelHeader({ title, subtitle, right }) {
   )
 }
 
+function LiveDot() {
+  return (
+    <span className="relative flex h-2.5 w-2.5">
+      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75" />
+      <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-green-500" />
+    </span>
+  )
+}
+
+function formatTimestamp(date) {
+  if (!date) return ''
+  return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })
+}
+
 export default function App() {
   const [selectedMine, setSelectedMine] = useState('balaghat')
   const [showHeatmap, setShowHeatmap] = useState(false)
   const [activeTab, setActiveTab] = useState('weather')
   const [showWhatIf, setShowWhatIf] = useState(false)
+  const [showCompare, setShowCompare] = useState(false)
 
   const { data: mines } = useMines()
-  const { data: forecast } = useForecast(selectedMine)
-  const { data: alerts } = useAlerts(selectedMine)
-  const { data: allAlerts } = useAlerts(null)
-  const { data: shap } = useShap(selectedMine)
-  const { data: weather } = useSatellite(selectedMine, 90)
-  const { data: production } = useProduction(selectedMine, 24)
+  const { data: forecast, lastUpdated: forecastUpdated, refetch: refetchForecast } = useForecast(selectedMine)
+  const { data: alerts, refetch: refetchAlerts } = useAlerts(selectedMine)
+  const { data: allAlerts, lastUpdated: alertsUpdated, refetch: refetchAllAlerts } = useAlerts(null)
+  const { data: shap, refetch: refetchShap } = useShap(selectedMine)
+  const { data: weather, refetch: refetchWeather } = useSatellite(selectedMine, 90)
+  const { data: production, refetch: refetchProduction } = useProduction(selectedMine, 24)
   const { data: heatmap } = useHeatmap(showHeatmap ? selectedMine : null)
+
+  useAutoRefresh([refetchForecast, refetchAlerts, refetchAllAlerts, refetchShap, refetchWeather, refetchProduction], 60000)
 
   const currentMine = mines?.find(m => m.id === selectedMine)
   const latestForecast = forecast?.[0]
@@ -66,8 +85,12 @@ export default function App() {
             <h1 className="text-xl font-bold tracking-tight">MangaLens</h1>
             <p className="text-xs text-blue-200 opacity-80">AI-Powered Manganese Intelligence Platform</p>
           </div>
+          <div className="flex items-center gap-1.5 ml-2">
+            <LiveDot />
+            <span className="text-[10px] text-green-300">LIVE</span>
+          </div>
         </div>
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-3">
           <MineSelector mines={mines} selected={selectedMine} onSelect={setSelectedMine} />
           <button
             onClick={downloadReport}
@@ -77,7 +100,17 @@ export default function App() {
             PDF Report
           </button>
           <button
-            onClick={() => setShowWhatIf(!showWhatIf)}
+            onClick={() => { setShowCompare(!showCompare); if (!showCompare) setShowWhatIf(false) }}
+            className={`text-xs px-3 py-1.5 rounded-lg border transition-colors ${
+              showCompare
+                ? 'bg-blue-500 text-white border-blue-500'
+                : 'bg-white/10 hover:bg-white/20 border-white/20'
+            }`}
+          >
+            Compare
+          </button>
+          <button
+            onClick={() => { setShowWhatIf(!showWhatIf); if (!showWhatIf) setShowCompare(false) }}
             className={`text-xs px-3 py-1.5 rounded-lg border transition-colors ${
               showWhatIf
                 ? 'bg-accent text-white border-accent'
@@ -88,7 +121,7 @@ export default function App() {
           </button>
           <div className="flex gap-2 text-xs">
             {criticalCount > 0 && (
-              <span className="px-2 py-1 rounded-full font-bold" style={{ backgroundColor: ALERT_COLORS.CRITICAL }}>
+              <span className="px-2 py-1 rounded-full font-bold animate-pulse" style={{ backgroundColor: ALERT_COLORS.CRITICAL }}>
                 {criticalCount} Critical
               </span>
             )}
@@ -113,6 +146,22 @@ export default function App() {
               }
             />
             <WhatIfSimulator mineId={selectedMine} mineName={currentMine?.name} />
+          </div>
+        </div>
+      )}
+
+      {/* Mine Comparison (collapsible) */}
+      {showCompare && (
+        <div className="px-6 py-3">
+          <div className="bg-card rounded-xl border-2 border-blue-400 p-4">
+            <PanelHeader
+              title="Mine Comparison"
+              subtitle={currentMine ? `Comparing ${currentMine.name} with other mines` : 'Select mines to compare'}
+              right={
+                <button onClick={() => setShowCompare(false)} className="text-xs text-gray-400 hover:text-gray-600">Close</button>
+              }
+            />
+            <MineCompare mines={mines} currentMineId={selectedMine} />
           </div>
         </div>
       )}
@@ -175,7 +224,17 @@ export default function App() {
 
         {/* Panel 2: Forecast */}
         <div className="bg-card rounded-xl border border-border p-4 flex flex-col min-h-[300px]">
-          <PanelHeader title="Production Forecast" subtitle={currentMine ? `${currentMine.name} — Ensemble: XGBoost (60%) + LSTM (40%)` : 'Select a mine'} />
+          <PanelHeader
+            title="Production Forecast"
+            subtitle={currentMine ? `${currentMine.name} — Ensemble: XGBoost (60%) + LSTM (40%)` : 'Select a mine'}
+            right={
+              forecastUpdated && (
+                <span className="text-[10px] text-text-muted flex items-center gap-1">
+                  <LiveDot /> {formatTimestamp(forecastUpdated)}
+                </span>
+              )
+            }
+          />
           <div className="flex-1">
             <ForecastChart forecast={forecast} production={production} />
           </div>
@@ -216,18 +275,40 @@ export default function App() {
 
         {/* Panel 4: Alerts + Actions */}
         <div className="bg-card rounded-xl border border-border p-4 flex flex-col min-h-[250px]">
-          <PanelHeader title="Alerts & Corrective Actions" subtitle={`${criticalCount + warningCount} active alerts across mines`} />
+          <PanelHeader
+            title="Alerts & Corrective Actions"
+            subtitle={`${criticalCount + warningCount} active alerts across mines`}
+            right={
+              alertsUpdated && (
+                <span className="text-[10px] text-text-muted flex items-center gap-1">
+                  <LiveDot /> {formatTimestamp(alertsUpdated)}
+                </span>
+              )
+            }
+          />
           <div className="flex-1 overflow-hidden">
             <AlertCards alerts={selectedMine ? alerts : allAlerts} />
           </div>
         </div>
       </div>
 
-      {/* SHAP Panel (full width) */}
-      <div className="px-6 pb-6">
-        <div className="bg-card rounded-xl border border-border p-4 h-64">
+      {/* Anomaly + SHAP row (full width, side by side) */}
+      <div className="px-6 pb-4 grid grid-cols-1 lg:grid-cols-2 gap-4">
+        {/* Anomaly Detection */}
+        <div className="bg-card rounded-xl border border-border p-4 min-h-[280px] flex flex-col">
+          <PanelHeader
+            title="Anomaly Detection"
+            subtitle={currentMine ? `${currentMine.name} — Isolation Forest + Z-score analysis` : 'Proactive anomaly scanning'}
+          />
+          <div className="flex-1">
+            <AnomalyPanel mineId={selectedMine} />
+          </div>
+        </div>
+
+        {/* SHAP */}
+        <div className="bg-card rounded-xl border border-border p-4 min-h-[280px] flex flex-col">
           <PanelHeader title="Feature Importance (SHAP)" subtitle={currentMine ? `Top factors driving ${currentMine.name} shortfall prediction` : 'What drives the forecast?'} />
-          <div className="h-48">
+          <div className="flex-1">
             <ShapChart shap={shap} />
           </div>
         </div>
@@ -235,7 +316,7 @@ export default function App() {
 
       {/* Footer */}
       <footer className="bg-primary text-blue-200 text-xs text-center py-2 opacity-80">
-        MangaLens v1.0 — SIH26009 — Ministry of Steel / MOIL Ltd. — XGBoost + LSTM Ensemble | Sentinel-2 Spectral | React
+        MangaLens v1.0 — SIH26009 — Ministry of Steel / MOIL Ltd. — XGBoost + LSTM Ensemble | Sentinel-2 Spectral | Anomaly Detection | React
       </footer>
     </div>
   )
