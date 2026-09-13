@@ -13,6 +13,8 @@ import ArchDiagram from './components/ArchDiagram'
 import ROICalculator from './components/ROICalculator'
 import NotificationCenter from './components/NotificationCenter'
 import VoiceQuery from './components/VoiceQuery'
+import AuditTrail from './components/AuditTrail'
+import RoleViews from './components/RoleViews'
 import { useMines, useForecast, useAlerts, useShap, useSatellite, useProduction, useHeatmap, useAutoRefresh } from './hooks/useApi'
 import { ALERT_COLORS, API_BASE } from './utils/constants'
 import { t, LANGUAGES } from './utils/i18n'
@@ -63,6 +65,8 @@ export default function App() {
   const [showROI, setShowROI] = useState(false)
   const [showNotifications, setShowNotifications] = useState(false)
   const [showVoice, setShowVoice] = useState(false)
+  const [showAudit, setShowAudit] = useState(false)
+  const [showRoles, setShowRoles] = useState(false)
   const [lang, setLang] = useState('en')
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
 
@@ -119,6 +123,18 @@ export default function App() {
         className="text-xs px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 transition-colors border border-white/20"
       >
         {t('btn_notify', lang)}
+      </button>
+      <button
+        onClick={() => setShowAudit(true)}
+        className="text-xs px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 transition-colors border border-white/20"
+      >
+        📜 {t('btn_audit', lang)}
+      </button>
+      <button
+        onClick={() => setShowRoles(true)}
+        className="text-xs px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 transition-colors border border-white/20"
+      >
+        🎭 {t('btn_roles', lang)}
       </button>
       <button
         onClick={() => { setShowCompare(!showCompare); if (!showCompare) setShowWhatIf(false) }}
@@ -411,6 +427,8 @@ export default function App() {
       {showROI && <ROICalculator onClose={() => setShowROI(false)} />}
       {showNotifications && <NotificationCenter onClose={() => setShowNotifications(false)} />}
       {showVoice && <VoiceQuery onClose={() => setShowVoice(false)} lang={lang} />}
+      {showAudit && <AuditTrail onClose={() => setShowAudit(false)} lang={lang} />}
+      {showRoles && <RoleViews onClose={() => setShowRoles(false)} lang={lang} selectedMine={selectedMine} />}
     </div>
   )
 }

@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="192" height="192" viewBox="0 0 192 192">
+  <rect width="192" height="192" rx="32" fill="#0f172a"/>
+  <text x="96" y="110" font-family="Arial,sans-serif" font-size="72" font-weight="bold" fill="#f97316" text-anchor="middle">ML</text>
+  <circle cx="96" cy="148" r="6" fill="#22c55e"/>
+</svg>

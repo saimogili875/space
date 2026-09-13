@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.routers import mines, forecast, alerts, satellite, report, whatif, anomaly, compare, roi, notifications, nlp
+from app.routers import mines, forecast, alerts, satellite, report, whatif, anomaly, compare, roi, notifications, nlp, audit, export
 
 app = FastAPI(
     title="MangaLens API",
@@ -28,6 +28,8 @@ app.include_router(compare.router)
 app.include_router(roi.router)
 app.include_router(notifications.router)
 app.include_router(nlp.router)
+app.include_router(audit.router)
+app.include_router(export.router)
 
 
 @app.get("/")
@@ -49,6 +51,8 @@ def root():
             "roi": "/api/roi",
             "notifications": "/api/notifications",
             "nlp": "/api/nlp",
+            "audit": "/api/audit",
+            "export": "/api/export/excel",
             "docs": "/docs",
         },
     }

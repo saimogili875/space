@@ -1,12 +1,18 @@
 from fastapi import APIRouter
 from pydantic import BaseModel
 from app.services.nlp_query import process_query
+from app.services.tts import synthesize_speech
 
 router = APIRouter(prefix="/api/nlp", tags=["nlp"])
 
 
 class QueryRequest(BaseModel):
     query: str
+    lang: str = "en"
+
+
+class TTSRequest(BaseModel):
+    text: str
     lang: str = "en"
 
 
@@ -20,3 +26,11 @@ def nlp_query(req: QueryRequest):
     else:
         result["answer_display"] = result["answer"]
     return result
+
+
+@router.post("/tts")
+def text_to_speech(req: TTSRequest):
+    result = synthesize_speech(req.text, req.lang)
+    if result:
+        return result
+    return {"error": "TTS unavailable", "audio": None}

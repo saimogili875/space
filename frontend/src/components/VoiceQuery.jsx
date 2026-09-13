@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useCallback } from 'react'
 import { API_BASE } from '../utils/constants'
 
 const EXAMPLE_QUERIES = [
@@ -91,6 +91,40 @@ export default function VoiceQuery({ onClose, lang = 'en' }) {
     }
   }
 
+  const [speaking, setSpeaking] = useState(null)
+  const audioRef = useRef(null)
+
+  const handleSpeak = useCallback(async (text, idx) => {
+    if (audioRef.current) {
+      audioRef.current.pause()
+      audioRef.current = null
+    }
+    if (speaking === idx) {
+      setSpeaking(null)
+      return
+    }
+
+    setSpeaking(idx)
+    try {
+      const res = await fetch(`${API_BASE}/nlp/tts`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text, lang }),
+      })
+      const data = await res.json()
+      if (data.audio) {
+        const audio = new Audio(`data:audio/wav;base64,${data.audio}`)
+        audioRef.current = audio
+        audio.onended = () => { setSpeaking(null); audioRef.current = null }
+        audio.play()
+      } else {
+        setSpeaking(null)
+      }
+    } catch {
+      setSpeaking(null)
+    }
+  }, [speaking, lang])
+
   const labels = {
     en: { title: 'AI Query Assistant', sub: 'Ask in English, Hindi, or Marathi — type or use voice', placeholder: 'Ask about any mine...', send: 'Send', listening: 'Listening...', examples: 'Try asking:' },
     hi: { title: 'AI क्वेरी सहायक', sub: 'अंग्रेज़ी, हिंदी या मराठी में पूछें', placeholder: 'किसी भी खदान के बारे में पूछें...', send: 'भेजें', listening: 'सुन रहा है...', examples: 'ये पूछकर देखें:' },
@@ -152,6 +186,17 @@ export default function VoiceQuery({ onClose, lang = 'en' }) {
                     {msg.mine_id && (
                       <span className="text-[10px] px-1.5 py-0.5 rounded bg-primary/10 text-primary">{msg.mine_id}</span>
                     )}
+                    <button
+                      onClick={() => handleSpeak(msg.text, i)}
+                      className={`ml-auto text-[10px] px-1.5 py-0.5 rounded transition-colors ${
+                        speaking === i
+                          ? 'bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400'
+                          : 'bg-surface hover:bg-primary/10 text-text-muted hover:text-primary'
+                      }`}
+                      title={speaking === i ? 'Stop' : 'Read aloud'}
+                    >
+                      {speaking === i ? '⏹ Stop' : '🔊 Listen'}
+                    </button>
                   </div>
                 )}
                 <div className="whitespace-pre-wrap leading-relaxed">
