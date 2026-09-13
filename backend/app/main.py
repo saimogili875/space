@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.routers import mines, forecast, alerts, satellite, report, whatif, anomaly, compare
+from app.routers import mines, forecast, alerts, satellite, report, whatif, anomaly, compare, roi
 
 app = FastAPI(
     title="MangaLens API",
@@ -25,6 +25,7 @@ app.include_router(report.router)
 app.include_router(whatif.router)
 app.include_router(anomaly.router)
 app.include_router(compare.router)
+app.include_router(roi.router)
 
 
 @app.get("/")
@@ -43,6 +44,7 @@ def root():
             "whatif": "/api/whatif/simulate",
             "anomaly": "/api/anomaly/{mine_id}",
             "compare": "/api/compare?mine_ids=balaghat,dongri_buzurg",
+            "roi": "/api/roi",
             "docs": "/docs",
         },
     }

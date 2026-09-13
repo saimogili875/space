@@ -9,6 +9,8 @@ import SpectralPanel from './components/SpectralPanel'
 import WhatIfSimulator from './components/WhatIfSimulator'
 import AnomalyPanel from './components/AnomalyPanel'
 import MineCompare from './components/MineCompare'
+import ArchDiagram from './components/ArchDiagram'
+import ROICalculator from './components/ROICalculator'
 import { useMines, useForecast, useAlerts, useShap, useSatellite, useProduction, useHeatmap, useAutoRefresh } from './hooks/useApi'
 import { ALERT_COLORS, API_BASE } from './utils/constants'
 
@@ -54,6 +56,8 @@ export default function App() {
   const [activeTab, setActiveTab] = useState('weather')
   const [showWhatIf, setShowWhatIf] = useState(false)
   const [showCompare, setShowCompare] = useState(false)
+  const [showArch, setShowArch] = useState(false)
+  const [showROI, setShowROI] = useState(false)
 
   const { data: mines } = useMines()
   const { data: forecast, lastUpdated: forecastUpdated, refetch: refetchForecast } = useForecast(selectedMine)
@@ -98,6 +102,18 @@ export default function App() {
             title="Download PDF Report"
           >
             PDF Report
+          </button>
+          <button
+            onClick={() => setShowArch(true)}
+            className="text-xs px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 transition-colors border border-white/20"
+          >
+            Architecture
+          </button>
+          <button
+            onClick={() => setShowROI(true)}
+            className="text-xs px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 transition-colors border border-white/20"
+          >
+            ROI
           </button>
           <button
             onClick={() => { setShowCompare(!showCompare); if (!showCompare) setShowWhatIf(false) }}
@@ -318,6 +334,10 @@ export default function App() {
       <footer className="bg-primary text-blue-200 text-xs text-center py-2 opacity-80">
         MangaLens v1.0 — SIH26009 — Ministry of Steel / MOIL Ltd. — XGBoost + LSTM Ensemble | Sentinel-2 Spectral | Anomaly Detection | React
       </footer>
+
+      {/* Modals */}
+      {showArch && <ArchDiagram onClose={() => setShowArch(false)} />}
+      {showROI && <ROICalculator onClose={() => setShowROI(false)} />}
     </div>
   )
 }
