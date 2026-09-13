@@ -12,8 +12,10 @@ import MineCompare from './components/MineCompare'
 import ArchDiagram from './components/ArchDiagram'
 import ROICalculator from './components/ROICalculator'
 import NotificationCenter from './components/NotificationCenter'
+import VoiceQuery from './components/VoiceQuery'
 import { useMines, useForecast, useAlerts, useShap, useSatellite, useProduction, useHeatmap, useAutoRefresh } from './hooks/useApi'
 import { ALERT_COLORS, API_BASE } from './utils/constants'
+import { t, LANGUAGES } from './utils/i18n'
 
 function StatCard({ label, value, sub, color }) {
   return (
@@ -60,6 +62,8 @@ export default function App() {
   const [showArch, setShowArch] = useState(false)
   const [showROI, setShowROI] = useState(false)
   const [showNotifications, setShowNotifications] = useState(false)
+  const [showVoice, setShowVoice] = useState(false)
+  const [lang, setLang] = useState('en')
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
 
   const { data: mines } = useMines()
@@ -86,29 +90,35 @@ export default function App() {
   const headerButtons = (
     <>
       <button
+        onClick={() => setShowVoice(true)}
+        className="text-xs px-3 py-1.5 rounded-lg bg-green-500/80 hover:bg-green-500 transition-colors border border-green-400 font-semibold"
+      >
+        🧠 {t('btn_voice', lang)}
+      </button>
+      <button
         onClick={downloadReport}
         className="text-xs px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 transition-colors border border-white/20"
         title="Download PDF Report"
       >
-        PDF Report
+        {t('btn_pdf', lang)}
       </button>
       <button
         onClick={() => setShowArch(true)}
         className="text-xs px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 transition-colors border border-white/20"
       >
-        Architecture
+        {t('btn_arch', lang)}
       </button>
       <button
         onClick={() => setShowROI(true)}
         className="text-xs px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 transition-colors border border-white/20"
       >
-        ROI
+        {t('btn_roi', lang)}
       </button>
       <button
-        onClick={() => { setShowNotifications(true); setMobileMenuOpen(false) }}
+        onClick={() => setShowNotifications(true)}
         className="text-xs px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 transition-colors border border-white/20"
       >
-        Notifications
+        {t('btn_notify', lang)}
       </button>
       <button
         onClick={() => { setShowCompare(!showCompare); if (!showCompare) setShowWhatIf(false) }}
@@ -118,7 +128,7 @@ export default function App() {
             : 'bg-white/10 hover:bg-white/20 border-white/20'
         }`}
       >
-        Compare
+        {t('btn_compare', lang)}
       </button>
       <button
         onClick={() => { setShowWhatIf(!showWhatIf); if (!showWhatIf) setShowCompare(false) }}
@@ -128,7 +138,7 @@ export default function App() {
             : 'bg-white/10 hover:bg-white/20 border-white/20'
         }`}
       >
-        What-If
+        {t('btn_whatif', lang)}
       </button>
     </>
   )
@@ -140,12 +150,28 @@ export default function App() {
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2 md:gap-3 min-w-0">
             <div className="min-w-0">
-              <h1 className="text-lg md:text-xl font-bold tracking-tight">MangaLens</h1>
-              <p className="text-[10px] md:text-xs text-blue-200 opacity-80 truncate">AI-Powered Manganese Intelligence</p>
+              <h1 className="text-lg md:text-xl font-bold tracking-tight">{t('app_title', lang)}</h1>
+              <p className="text-[10px] md:text-xs text-blue-200 opacity-80 truncate">{t('app_subtitle', lang)}</p>
             </div>
             <div className="flex items-center gap-1.5">
               <LiveDot />
-              <span className="text-[10px] text-green-300 hidden sm:inline">LIVE</span>
+              <span className="text-[10px] text-green-300 hidden sm:inline">{t('live', lang)}</span>
+            </div>
+            <div className="flex items-center gap-0.5 ml-1">
+              {LANGUAGES.map(l => (
+                <button
+                  key={l.code}
+                  onClick={() => setLang(l.code)}
+                  className={`text-[10px] px-1.5 py-0.5 rounded transition-colors ${
+                    lang === l.code
+                      ? 'bg-white text-primary font-bold'
+                      : 'text-blue-200 hover:text-white'
+                  }`}
+                  title={l.name}
+                >
+                  {l.label}
+                </button>
+              ))}
             </div>
           </div>
 
@@ -230,25 +256,25 @@ export default function App() {
       {/* Stats Bar */}
       <div className="px-4 md:px-6 py-3 grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-3">
         <StatCard
-          label="Selected Mine"
+          label={t('selected_mine', lang)}
           value={currentMine?.name || '—'}
           sub={`${currentMine?.type || ''} — ${currentMine?.state || ''}`}
         />
         <StatCard
-          label="Predicted Output"
+          label={t('predicted_output', lang)}
           value={latestForecast ? `${(latestForecast.predicted_tonnes / 1000).toFixed(1)}k t` : '—'}
           sub={latestForecast?.period}
         />
         <StatCard
-          label="Shortfall Risk"
+          label={t('shortfall_risk', lang)}
           value={latestForecast ? `${Math.abs(latestForecast.shortfall_pct).toFixed(1)}%` : '—'}
           color={latestForecast ? ALERT_COLORS[latestForecast.alert_level] : undefined}
           sub={latestForecast?.alert_level?.replace('_', ' ')}
         />
         <StatCard
-          label="Target"
+          label={t('target', lang)}
           value={latestForecast ? `${(latestForecast.target_tonnes / 1000).toFixed(1)}k t` : '—'}
-          sub="Monthly target"
+          sub={t('monthly_target', lang)}
         />
       </div>
 
@@ -257,8 +283,8 @@ export default function App() {
         {/* Panel 1: Map */}
         <div className="bg-card rounded-xl border border-border p-3 md:p-4 flex flex-col min-h-[250px] md:min-h-[300px]">
           <PanelHeader
-            title="MOIL Mine Locations"
-            subtitle={showHeatmap ? `${currentMine?.name || ''} — Manganese probability heatmap` : 'Click mine to select — color indicates alert status'}
+            title={t('mine_locations', lang)}
+            subtitle={showHeatmap ? `${currentMine?.name || ''} — ${t('heatmap_sub', lang)}` : t('mine_locations_sub', lang)}
             right={
               <button
                 onClick={() => setShowHeatmap(!showHeatmap)}
@@ -268,7 +294,7 @@ export default function App() {
                     : 'bg-transparent text-primary border-primary hover:bg-primary/10'
                 }`}
               >
-                {showHeatmap ? 'Hide Heatmap' : 'Show Mn Heatmap'}
+                {showHeatmap ? t('heatmap_hide', lang) : t('heatmap_show', lang)}
               </button>
             }
           />
@@ -286,8 +312,8 @@ export default function App() {
         {/* Panel 2: Forecast */}
         <div className="bg-card rounded-xl border border-border p-3 md:p-4 flex flex-col min-h-[250px] md:min-h-[300px]">
           <PanelHeader
-            title="Production Forecast"
-            subtitle={currentMine ? `${currentMine.name} — Ensemble: XGBoost (60%) + LSTM (40%)` : 'Select a mine'}
+            title={t('production_forecast', lang)}
+            subtitle={currentMine ? `${currentMine.name} — ${t('ensemble_sub', lang)}` : t('select_mine', lang)}
             right={
               forecastUpdated && (
                 <span className="text-[10px] text-text-muted flex items-center gap-1">
@@ -304,10 +330,10 @@ export default function App() {
         {/* Panel 3: Weather / Spectral toggle */}
         <div className="bg-card rounded-xl border border-border p-3 md:p-4 flex flex-col min-h-[220px] md:min-h-[250px]">
           <PanelHeader
-            title={activeTab === 'weather' ? 'Environmental Data' : 'Spectral Analysis'}
+            title={activeTab === 'weather' ? t('env_data', lang) : t('spectral', lang)}
             subtitle={activeTab === 'weather'
-              ? (currentMine ? `${currentMine.name} — Last 90 days from satellite` : 'Satellite-derived indicators')
-              : (currentMine ? `${currentMine.name} — Sentinel-2 band ratios` : 'Band ratio indices')
+              ? (currentMine ? `${currentMine.name} — ${t('satellite_sub', lang)}` : t('satellite_sub', lang))
+              : (currentMine ? `${currentMine.name} — ${t('band_ratios', lang)}` : t('band_ratios', lang))
             }
             right={
               <div className="flex gap-1 text-xs">
@@ -315,13 +341,13 @@ export default function App() {
                   onClick={() => setActiveTab('weather')}
                   className={`px-2 py-1 rounded ${activeTab === 'weather' ? 'bg-primary text-white' : 'text-primary hover:bg-primary/10'}`}
                 >
-                  Weather
+                  {t('weather', lang)}
                 </button>
                 <button
                   onClick={() => setActiveTab('spectral')}
                   className={`px-2 py-1 rounded ${activeTab === 'spectral' ? 'bg-primary text-white' : 'text-primary hover:bg-primary/10'}`}
                 >
-                  Spectral
+                  {t('spectral_btn', lang)}
                 </button>
               </div>
             }
@@ -337,8 +363,8 @@ export default function App() {
         {/* Panel 4: Alerts + Actions */}
         <div className="bg-card rounded-xl border border-border p-3 md:p-4 flex flex-col min-h-[220px] md:min-h-[250px]">
           <PanelHeader
-            title="Alerts & Corrective Actions"
-            subtitle={`${criticalCount + warningCount} active alerts across mines`}
+            title={t('alerts_title', lang)}
+            subtitle={`${criticalCount + warningCount} ${t('alerts_sub', lang)}`}
             right={
               alertsUpdated && (
                 <span className="text-[10px] text-text-muted flex items-center gap-1">
@@ -358,8 +384,8 @@ export default function App() {
         {/* Anomaly Detection */}
         <div className="bg-card rounded-xl border border-border p-3 md:p-4 min-h-[250px] md:min-h-[280px] flex flex-col">
           <PanelHeader
-            title="Anomaly Detection"
-            subtitle={currentMine ? `${currentMine.name} — Isolation Forest + Z-score analysis` : 'Proactive anomaly scanning'}
+            title={t('anomaly_title', lang)}
+            subtitle={currentMine ? `${currentMine.name} — ${t('anomaly_sub', lang)}` : t('proactive_scanning', lang)}
           />
           <div className="flex-1">
             <AnomalyPanel mineId={selectedMine} />
@@ -368,7 +394,7 @@ export default function App() {
 
         {/* SHAP */}
         <div className="bg-card rounded-xl border border-border p-3 md:p-4 min-h-[250px] md:min-h-[280px] flex flex-col">
-          <PanelHeader title="Feature Importance (SHAP)" subtitle={currentMine ? `Top factors driving ${currentMine.name} shortfall prediction` : 'What drives the forecast?'} />
+          <PanelHeader title={t('shap_title', lang)} subtitle={currentMine ? `${currentMine.name} — ${t('shap_sub', lang)}` : t('what_drives', lang)} />
           <div className="flex-1">
             <ShapChart shap={shap} />
           </div>
@@ -377,13 +403,14 @@ export default function App() {
 
       {/* Footer */}
       <footer className="bg-primary text-blue-200 text-[10px] md:text-xs text-center py-2 px-4 opacity-80">
-        MangaLens v1.0 — SIH26009 — Ministry of Steel / MOIL Ltd. — XGBoost + LSTM Ensemble | Sentinel-2 Spectral | Anomaly Detection | React
+        {t('footer', lang)} — XGBoost + LSTM | Sentinel-2 | React
       </footer>
 
       {/* Modals */}
       {showArch && <ArchDiagram onClose={() => setShowArch(false)} />}
       {showROI && <ROICalculator onClose={() => setShowROI(false)} />}
       {showNotifications && <NotificationCenter onClose={() => setShowNotifications(false)} />}
+      {showVoice && <VoiceQuery onClose={() => setShowVoice(false)} lang={lang} />}
     </div>
   )
 }
